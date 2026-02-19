@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тренажёр: сложение и вычитание</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1rem;
+      background: #f5f5f5;
+      color: #222;
+    }
+    h1 { font-size: 1.5rem; margin-top: 0; }
+    .panel {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .row { margin-bottom: 0.75rem; }
+    label { display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9rem; }
+    select, input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .inline-options { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .inline-options label { margin: 0; font-weight: normal; display: flex; align-items: center; gap: 0.25rem; }
+    .inline-options input[type="radio"] { width: auto; }
+    .btn {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secondary { background: #64748b; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-hint { font-size: 0.85rem; padding: 0.35rem 0.6rem; background: #94a3b8; }
+    #setupPanel { }
+    #exercisePanel { display: none; }
+    #resultPanel { display: none; }
+    .timer { font-size: 1.25rem; font-weight: 700; color: #2563eb; }
+    .timer.warning { color: #dc2626; }
+    .timer.game { font-size: 2rem; text-align: center; margin: 0.5rem 0; }
+    .task { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .task .expr { font-size: 1.1rem; font-family: 'Consolas', monospace; min-width: 120px; }
+    .task input { width: 80px; padding: 0.4rem; font-size: 1rem; }
+    .task .hint-wrap { width: 100%; }
+    .hint-box {
+      background: #f1f5f9;
+      border-left: 4px solid #64748b;
+      padding: 0.5rem 0.75rem;
+      margin-top: 0.25rem;
+      font-size: 0.9rem;
+      border-radius: 0 4px 4px 0;
+    }
+    .hint-box .example { font-family: 'Consolas', monospace; margin-top: 0.25rem; }
+    .correct { color: #16a34a; }
+    .wrong { color: #dc2626; }
+    #resultSummary { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .mode-option { margin-right: 1rem; }
+    .enter-hint { font-size: 0.9rem; color: #64748b; margin-top: 0.5rem; }
+    .task-one .expr { font-size: 1.4rem; }
+    .task-one input { width: 100px; font-size: 1.2rem; padding: 0.5rem; }
+    .pause-panel { text-align: center; padding: 2rem 0; }
+    .pause-text { font-size: 1.25rem; margin-bottom: 1rem; }
+    .exercise-buttons { display: flex; gap: 0.5rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Тренажёр: сложение и вычитание</h1>
+
+  <div id="setupPanel" class="panel">
+    <div class="row">
+      <label>Имя (по желанию)</label>
+      <input type="text" id="studentName" placeholder="Можно не заполнять">
+    </div>
+    <div class="row">
+      <label>Уровень</label>
+      <select id="level">
+        <option value="1">1 — Сложение натуральных</option>
+        <option value="2">2 — Вычитание натуральных (ответ +)</option>
+        <option value="3">3 — Вычитание натуральных (ответ −)</option>
+        <option value="4">4 — Два отрицательных (−a − b)</option>
+        <option value="5">5 — Микс целых (1–4)</option>
+        <option value="6">6 — Сложение десятичных</option>
+        <option value="7">7 — Вычитание десятичных (ответ +)</option>
+        <option value="8">8 — Вычитание десятичных (ответ −)</option>
+        <option value="9">9 — Два отрицательных, десятичные</option>
+        <option value="10">10 — Микс десятичных (6–9)</option>
+        <option value="11">11 — Серебряный: три слагаемых (целые)</option>
+        <option value="12">12 — Золотой: три слагаемых (десятичные)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Режим</label>
+      <div class="inline-options">
+        <label class="mode-option"><input type="radio" name="mode" value="timer" checked> Тренировка</label>
+        <label class="mode-option"><input type="radio" name="mode" value="game"> Игра на время</label>
+      </div>
+    </div>
+    <div class="row" id="gameTimeRow" style="display:none;">
+      <label>Лимит времени (секунд)</label>
+      <div class="inline-options">
+        <label><input type="radio" name="gameTime" value="30"> 30 сек</label>
+        <label><input type="radio" name="gameTime" value="60" checked> 60 сек</label>
+        <label><input type="radio" name="gameTime" value="90"> 90 сек</label>
+        <label><input type="radio" name="gameTime" value="120"> 120 сек</label>
+      </div>
+    </div>
+    <button class="btn" id="btnStart">Начать</button>
+  </div>
+
+  <div id="exercisePanel" class="panel">
+    <div class="row" id="timerRow" style="display:none;">
+      <span class="timer" id="timerDisplay"></span>
+    </div>
+    <div class="row" id="gameTimerRow" style="display:none;">
+      <div class="timer game" id="gameTimerDisplay"></div>
+    </div>
+    <div id="taskArea">
+      <div class="row" id="taskCounterRow"><span id="taskCounter"></span></div>
+      <div id="tasksContainer"></div>
+      <p class="enter-hint">Введите ответ и нажмите Enter</p>
+    </div>
+    <div id="pausePanel" class="pause-panel" style="display:none;">
+      <p class="pause-text">Пауза</p>
+      <button type="button" class="btn" id="btnResume">Продолжить</button>
+    </div>
+    <div class="exercise-buttons">
+      <button type="button" class="btn btn-secondary" id="btnPause">Пауза</button>
+      <button type="button" class="btn btn-secondary" id="btnExitToMenu">Вернуться в меню</button>
+    </div>
+  </div>
+
+  <div id="resultPanel" class="panel">
+    <div id="resultSummary"></div>
+    <div class="row">
+      <button class="btn" id="btnSendReport">Отправить результат учителю</button>
+    </div>
+    <button class="btn btn-secondary" id="btnAgain">Вернуться в меню</button>
+  </div>
+
+  <script>
+    // ========== НАСТРОЙКА GOOGLE FORM ==========
+    // Создайте форму с полями и вставьте сюда базовый URL предзаполнения (из «Отправить» → «</>» → «Предзаполнить»).
+    // В URL замените значения на плейсхолдеры или используйте GOOGLE_FORM_ENTRIES ниже.
+    const GOOGLE_FORM_BASE_URL = 'https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform?usp=pp_url';
+    const GOOGLE_FORM_ENTRIES = {
+      name: 'entry.XXXXXX',
+      mode: 'entry.XXXXXX',
+      level: 'entry.XXXXXX',
+      correct: 'entry.XXXXXX',
+      total: 'entry.XXXXXX',
+      time: 'entry.XXXXXX',
+      date: 'entry.XXXXXX'
+    };
+
+    const MODE_LABELS = { timer: 'Тренировка', game: 'Игра на время' };
+
+    let state = {
+      level: 1,
+      mode: 'timer',
+      taskCount: 10,
+      gameTimeLimit: 60,
+      tasks: [],
+      currentIndex: 0,
+      answers: [],
+      startTime: null,
+      elapsedSeconds: 0,
+      timerInterval: null,
+      gameCountdownInterval: null,
+      gameTimeLeft: 0,
+      checked: false,
+      paused: false,
+      pauseStartTime: null
+    };
+
+    const hints = {
+      type1: {
+        text: 'Складываем два положительных числа: к первому прибавляем второе.',
+        example: '5 + 4:<br>Шаг 1: Берём первое число — 5.<br>Шаг 2: Прибавляем второе — 4.<br>Шаг 3: 5 + 4 = 9.'
+      },
+      type2: {
+        text: 'Вычитание: от первого числа отнимаем второе. Первое число больше второго — ответ будет положительный.',
+        example: '5 − 4:<br>Шаг 1: Берём 5, отнимаем 4.<br>Шаг 2: 5 − 4 = 1.'
+      },
+      type3: {
+        text: 'Вычитание: отнимаем от меньшего числа большее. Получится отрицательное число: «не хватает» до нуля.',
+        example: '4 − 5:<br>Шаг 1: От 4 нужно отнять 5 — четырёх не хватает.<br>Шаг 2: Не хватает 1, значит ответ: −1.<br>4 − 5 = −1.'
+      },
+      type4: {
+        text: 'Оба числа с минусом. Удобно: сложи числа как будто без минуса, а перед ответом поставь минус.',
+        example: '−6 − 7:<br>Шаг 1: Числа 6 и 7 — оба «с минусом».<br>Шаг 2: Складываем: 6 + 7 = 13.<br>Шаг 3: Ставим минус перед результатом: −13.<br>−6 − 7 = −13.'
+      },
+      type1d: {
+        text: 'Сложение десятичных: складывай так же, как целые, запятую ставь под запятой. Сначала дробную часть, потом целую.',
+        example: '2,5 + 1,3:<br>Шаг 1: Дробные части: 5 + 3 = 8.<br>Шаг 2: Целые: 2 + 1 = 3.<br>Шаг 3: Получаем 3,8.<br>2,5 + 1,3 = 3,8.'
+      },
+      type2d: {
+        text: 'Вычитание десятичных: от первого отнимаем второе, запятая под запятой. Ответ получится положительный.',
+        example: '5,2 − 4,1:<br>Шаг 1: Дробные части: 2 − 1 = 1.<br>Шаг 2: Целые: 5 − 4 = 1.<br>Шаг 3: Ответ: 1,1.<br>5,2 − 4,1 = 1,1.'
+      },
+      type3d: {
+        text: 'Вычитание десятичных: от меньшего отнимаем большее — ответ будет отрицательный. Считай по разрядам.',
+        example: '4,1 − 5,2:<br>Шаг 1: 4,1 меньше 5,2 — ответ будет с минусом.<br>Шаг 2: Считаем: 5,2 − 4,1 = 1,1, ставим минус.<br>4,1 − 5,2 = −1,1.'
+      },
+      type4d: {
+        text: 'Два отрицательных десятичных: сложи числа по модулю (без минуса), перед ответом поставь минус.',
+        example: '−1,5 − 2,3:<br>Шаг 1: Складываем 1,5 + 2,3 = 3,8.<br>Шаг 2: Оба были с минусом — ответ: −3,8.<br>−1,5 − 2,3 = −3,8.'
+      },
+      three: {
+        text: 'Три слагаемых: считай по порядку слева направо. Учитывай знаки: плюс — прибавляем, минус — отнимаем.',
+        example: '−2 + 3 − 5:<br>Шаг 1: Сначала −2 + 3 = 1.<br>Шаг 2: Потом 1 − 5 = −4.<br>−2 + 3 − 5 = −4.'
+      },
+      threed: {
+        text: 'Три десятичных слагаемых: так же по порядку слева направо, не забывай выравнивать запятую при подсчёте.',
+        example: '−1,2 + 3,4 − 0,5:<br>Шаг 1: −1,2 + 3,4 = 2,2.<br>Шаг 2: 2,2 − 0,5 = 1,7.<br>−1,2 + 3,4 − 0,5 = 1,7.'
+      }
+    };
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randDecimal(min, max, decimals) {
+      const scale = Math.pow(10, decimals);
+      const v = randInt(Math.round(min * scale), Math.round(max * scale));
+      return v / scale;
+    }
+
+    function fmtNum(n, decimals) {
+      if (decimals) return n.toFixed(1).replace('.', ',');
+      return n;
+    }
+
+    function fmtTerm(n, decimals, forceSign) {
+      const s = fmtNum(n, decimals);
+      if (n >= 0 && forceSign) return '+' + s;
+      if (n >= 0) return s;
+      return '−' + fmtNum(Math.abs(n), decimals);
+    }
+
+    function generateTask(level) {
+      let effectiveLevel = level;
+      if (level === 5) effectiveLevel = randInt(1, 4);
+      else if (level === 10) effectiveLevel = randInt(6, 9);
+
+      const isDecimal = effectiveLevel >= 6 && effectiveLevel <= 9;
+
+      if (level === 11) return generateThreeTermTask(false);
+      if (level === 12) return generateThreeTermTask(true);
+
+      switch (effectiveLevel) {
+        case 1:
+          return genType1(false);
+        case 2:
+          return genType2(false);
+        case 3:
+          return genType3(false);
+        case 4:
+          return genType4(false);
+        case 6:
+          return genType1(true);
+        case 7:
+          return genType2(true);
+        case 8:
+          return genType3(true);
+        case 9:
+          return genType4(true);
+        default:
+          return genType1(false);
+      }
+    }
+
+    function genType1(decimal) {
+      if (decimal) {
+        const a = randDecimal(0.1, 9.9, 1);
+        const b = randDecimal(0.1, 9.9, 1);
+        const answer = Math.round((a + b) * 10) / 10;
+        const expr = fmtNum(a, true) + ' + ' + fmtNum(b, true);
+        return { answer, expr, hintKey: 'type1d' };
+      }
+      const a = randInt(1, 50);
+      const b = randInt(1, 50);
+      return { answer: a + b, expr: a + ' + ' + b, hintKey: 'type1' };
+    }
+
+    function genType2(decimal) {
+      if (decimal) {
+        let a = randDecimal(1, 9.9, 1);
+        let b = randDecimal(0.1, Math.max(0.1, a - 0.1), 1);
+        b = Math.round(b * 10) / 10;
+        if (a <= b) { const t = a; a = b; b = t; }
+        const answer = Math.round((a - b) * 10) / 10;
+        const expr = fmtNum(a, true) + ' − ' + fmtNum(b, true);
+        return { answer, expr, hintKey: 'type2d' };
+      }
+      const a = randInt(2, 50);
+      const b = randInt(1, a - 1);
+      return { answer: a - b, expr: a + ' − ' + b, hintKey: 'type2' };
+    }
+
+    function genType3(decimal) {
+      if (decimal) {
+        let a = randDecimal(0.1, 9, 1);
+        let b = randDecimal(a + 0.1, 9.9, 1);
+        const answer = Math.round((a - b) * 10) / 10;
+        const expr = fmtNum(a, true) + ' − ' + fmtNum(b, true);
+        return { answer, expr, hintKey: 'type3d' };
+      }
+      const a = randInt(1, 40);
+      const b = randInt(a + 1, 50);
+      return { answer: a - b, expr: a + ' − ' + b, hintKey: 'type3' };
+    }
+
+    function genType4(decimal) {
+      if (decimal) {
+        const a = randDecimal(0.1, 4.9, 1);
+        const b = randDecimal(0.1, 4.9, 1);
+        const answer = Math.round((-(a + b)) * 10) / 10;
+        const expr = '−' + fmtNum(a, true) + ' − ' + fmtNum(b, true);
+        return { answer, expr, hintKey: 'type4d' };
+      }
+      const a = randInt(1, 15);
+      const b = randInt(1, 15);
+      return { answer: -(a + b), expr: '−' + a + ' − ' + b, hintKey: 'type4' };
+    }
+
+    function generateThreeTermTask(decimal) {
+      const n1 = decimal ? randDecimal(-9.9, 9.9, 1) : randInt(-15, 15);
+      let n2 = decimal ? randDecimal(-9.9, 9.9, 1) : randInt(-15, 15);
+      let n3 = decimal ? randDecimal(-9.9, 9.9, 1) : randInt(-15, 15);
+      if (!decimal && (n1 === 0 && n2 === 0 && n3 === 0)) {
+        n2 = randInt(1, 10);
+        n3 = randInt(-10, -1);
+      }
+      const answer = decimal
+        ? Math.round((n1 + n2 + n3) * 10) / 10
+        : n1 + n2 + n3;
+      const part1 = fmtTerm(n1, decimal, false);
+      const part2 = (n2 >= 0 ? '+' : '−') + (decimal ? fmtNum(Math.abs(n2), true) : Math.abs(n2));
+      const part3 = (n3 >= 0 ? '+' : '−') + (decimal ? fmtNum(Math.abs(n3), true) : Math.abs(n3));
+      const expr = part1 + part2 + part3;
+      return { answer, expr, hintKey: decimal ? 'threed' : 'three' };
+    }
+
+    function isDecimalLevel(level) {
+      return (level >= 6 && level <= 10) || level === 12;
+    }
+
+    function parseAnswer(raw, level) {
+      const s = String(raw).trim().replace(',', '.');
+      return isDecimalLevel(level) ? parseFloat(s) : parseInt(s, 10);
+    }
+
+    function isCorrect(userAnswer, task, level) {
+      const raw = String(userAnswer).trim();
+      if (raw === '') return false;
+      const num = parseAnswer(raw, level);
+      if (isNaN(num)) return false;
+      if (isDecimalLevel(level)) return Math.abs(num - task.answer) < 0.01;
+      return num === task.answer;
+    }
+
+    function showHint(taskIndex) {
+      const task = state.tasks[taskIndex];
+      const h = hints[task.hintKey] || hints.type1;
+      const box = document.getElementById(`hint-${taskIndex}`);
+      if (!box) return;
+      box.innerHTML = `<div class="hint-box"><div>${h.text}</div><div class="example">Пример: ${h.example}</div></div>`;
+      box.style.display = 'block';
+    }
+
+    function toggleModeOptions() {
+      const mode = document.querySelector('input[name="mode"]:checked').value;
+      document.getElementById('gameTimeRow').style.display = mode === 'game' ? 'block' : 'none';
+    }
+
+    function getTaskCount() {
+      return 10;
+    }
+
+    function getGameTimeLimit() {
+      const r = document.querySelector('input[name="gameTime"]:checked');
+      return r ? parseInt(r.value, 10) : 60;
+    }
+
+    function startTraining() {
+      state.level = parseInt(document.getElementById('level').value, 10);
+      state.mode = document.querySelector('input[name="mode"]:checked').value;
+      state.taskCount = getTaskCount();
+      state.gameTimeLimit = getGameTimeLimit();
+      state.tasks = [];
+      for (let i = 0; i < state.taskCount; i++) state.tasks.push(generateTask(state.level));
+      state.currentIndex = 0;
+      state.answers = [];
+      state.startTime = Date.now();
+      state.elapsedSeconds = 0;
+      state.checked = false;
+      state.paused = false;
+      state.pauseStartTime = null;
+
+      document.getElementById('setupPanel').style.display = 'none';
+      document.getElementById('exercisePanel').style.display = 'block';
+      document.getElementById('resultPanel').style.display = 'none';
+
+      const timerRow = document.getElementById('timerRow');
+      const gameTimerRow = document.getElementById('gameTimerRow');
+      timerRow.style.display = state.mode === 'timer' ? 'block' : 'none';
+      gameTimerRow.style.display = state.mode === 'game' ? 'block' : 'none';
+
+      if (state.mode === 'timer') {
+        const el = document.getElementById('timerDisplay');
+        el.textContent = '0 сек';
+        state.timerInterval = setInterval(() => {
+          state.elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
+          el.textContent = state.elapsedSeconds + ' сек';
+        }, 1000);
+      }
+
+      if (state.mode === 'game') {
+        state.gameTimeLeft = state.gameTimeLimit;
+        const el = document.getElementById('gameTimerDisplay');
+        el.textContent = state.gameTimeLeft + ' сек';
+        el.classList.remove('warning');
+        state.gameCountdownInterval = setInterval(() => {
+          state.gameTimeLeft--;
+          el.textContent = state.gameTimeLeft + ' сек';
+          if (state.gameTimeLeft <= 10) el.classList.add('warning');
+          if (state.gameTimeLeft <= 0) {
+            clearInterval(state.gameCountdownInterval);
+            state.gameTimeLeft = 0;
+            finishTraining();
+          }
+        }, 1000);
+      }
+
+      document.getElementById('pausePanel').style.display = 'none';
+      document.getElementById('taskArea').style.display = 'block';
+      renderCurrentTask();
+    }
+
+    function pauseGame() {
+      if (state.paused || state.checked) return;
+      state.paused = true;
+      state.pauseStartTime = Date.now();
+      if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+      if (state.gameCountdownInterval) { clearInterval(state.gameCountdownInterval); state.gameCountdownInterval = null; }
+      document.getElementById('taskArea').style.display = 'none';
+      document.getElementById('pausePanel').style.display = 'block';
+      document.getElementById('btnPause').textContent = 'Продолжить';
+    }
+
+    function resumeGame() {
+      if (!state.paused || state.checked) return;
+      state.paused = false;
+      state.startTime += (Date.now() - state.pauseStartTime);
+      state.pauseStartTime = null;
+      document.getElementById('pausePanel').style.display = 'none';
+      document.getElementById('taskArea').style.display = 'block';
+      if (state.mode === 'timer') {
+        const el = document.getElementById('timerDisplay');
+        state.timerInterval = setInterval(() => {
+          state.elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
+          el.textContent = state.elapsedSeconds + ' сек';
+        }, 1000);
+      }
+      if (state.mode === 'game') {
+        const el = document.getElementById('gameTimerDisplay');
+        el.textContent = state.gameTimeLeft + ' сек';
+        if (state.gameTimeLeft <= 10) el.classList.add('warning');
+        state.gameCountdownInterval = setInterval(() => {
+          state.gameTimeLeft--;
+          el.textContent = state.gameTimeLeft + ' сек';
+          if (state.gameTimeLeft <= 10) el.classList.add('warning');
+          if (state.gameTimeLeft <= 0) {
+            clearInterval(state.gameCountdownInterval);
+            state.gameTimeLeft = 0;
+            finishTraining();
+          }
+        }, 1000);
+      }
+      document.getElementById('btnPause').textContent = 'Пауза';
+      const inp = document.getElementById('currentAnswer');
+      if (inp) inp.focus();
+    }
+
+    function renderCurrentTask() {
+      const i = state.currentIndex;
+      const task = state.tasks[i];
+      const container = document.getElementById('tasksContainer');
+      document.getElementById('taskCounter').textContent = 'Пример ' + (i + 1) + ' из ' + state.taskCount;
+      container.innerHTML = `
+        <div class="task task-one">
+          <span class="expr" id="currentExpr">${task.expr} =</span>
+          <input type="text" id="currentAnswer" inputmode="${isDecimalLevel(state.level) ? 'decimal' : 'numeric'}" data-index="${i}" placeholder="?" autocomplete="off">
+          <button type="button" class="btn btn-hint" id="btnHintCurrent">Подсказка</button>
+          <div class="hint-wrap" id="hint-current" style="display:none;"></div>
+        </div>
+      `;
+      const inp = document.getElementById('currentAnswer');
+      const hintBtn = document.getElementById('btnHintCurrent');
+      hintBtn.addEventListener('click', () => {
+        const h = hints[task.hintKey] || hints.type1;
+        const box = document.getElementById('hint-current');
+        box.innerHTML = `<div class="hint-box"><div>${h.text}</div><div class="example">Пример: ${h.example}</div></div>`;
+        box.style.display = 'block';
+      });
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitCurrentAnswer();
+        }
+      });
+      inp.focus();
+    }
+
+    function submitCurrentAnswer() {
+      if (state.paused) return;
+      const inp = document.getElementById('currentAnswer');
+      if (!inp) return;
+      const i = state.currentIndex;
+      const task = state.tasks[i];
+      const raw = inp.value.trim();
+      const ok = isCorrect(raw, task, state.level);
+      if (state.mode === 'timer') {
+        if (!ok) {
+          inp.value = '';
+          inp.focus();
+          const h = hints[task.hintKey] || hints.type1;
+          const box = document.getElementById('hint-current');
+          if (box) {
+            box.innerHTML = `<div class="hint-box"><div>${h.text}</div><div class="example">Пример: ${h.example}</div></div>`;
+            box.style.display = 'block';
+          }
+          return;
+        }
+      }
+      state.answers.push(ok);
+      state.currentIndex++;
+      if (state.currentIndex >= state.taskCount) {
+        finishTraining();
+      } else {
+        renderCurrentTask();
+      }
+    }
+
+    function finishTraining() {
+      if (state.checked) return;
+      state.checked = true;
+
+      if (state.mode === 'timer') {
+        state.elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
+        if (state.timerInterval) clearInterval(state.timerInterval);
+      }
+      if (state.mode === 'game' && state.gameCountdownInterval) {
+        clearInterval(state.gameCountdownInterval);
+        state.gameCountdownInterval = null;
+      }
+      while (state.answers.length < state.taskCount) state.answers.push(false);
+
+      const correct = state.answers.filter(Boolean).length;
+      const total = state.taskCount;
+
+      document.getElementById('exercisePanel').style.display = 'none';
+      document.getElementById('resultPanel').style.display = 'block';
+
+      let timeStr;
+      if (state.mode === 'game') {
+        const used = state.gameTimeLimit - state.gameTimeLeft;
+        timeStr = `Лимит ${state.gameTimeLimit} сек, использовано ${used} сек. ${state.gameTimeLeft > 0 ? 'Уложился!' : 'Время вышло.'}`;
+      } else {
+        state.elapsedSeconds = state.mode === 'timer' ? state.elapsedSeconds : Math.floor((Date.now() - state.startTime) / 1000);
+        timeStr = state.elapsedSeconds + ' сек';
+      }
+
+      document.getElementById('resultSummary').innerHTML = `
+        <p><strong>Результат: ${correct} из ${total}</strong></p>
+        <p>Время: ${timeStr}</p>
+      `;
+
+      state.resultCorrect = correct;
+      state.resultTotal = total;
+      state.resultTimeStr = timeStr;
+    }
+
+    function buildReportUrl() {
+      const name = (document.getElementById('studentName').value || '—').trim() || '—';
+      const mode = MODE_LABELS[state.mode] || state.mode;
+      const level = state.level;
+      const correct = state.resultCorrect;
+      const total = state.resultTotal;
+      const time = state.resultTimeStr || '';
+      const date = new Date().toLocaleString('ru-RU');
+
+      const params = new URLSearchParams();
+      params.set(GOOGLE_FORM_ENTRIES.name, name);
+      params.set(GOOGLE_FORM_ENTRIES.mode, mode);
+      params.set(GOOGLE_FORM_ENTRIES.level, level);
+      params.set(GOOGLE_FORM_ENTRIES.correct, correct);
+      params.set(GOOGLE_FORM_ENTRIES.total, total);
+      params.set(GOOGLE_FORM_ENTRIES.time, time);
+      params.set(GOOGLE_FORM_ENTRIES.date, date);
+
+      const base = GOOGLE_FORM_BASE_URL;
+      return base + (base.includes('?') ? '&' : '?') + params.toString();
+    }
+
+    function sendReport() {
+      const url = buildReportUrl();
+      if (url.includes('YOUR_FORM_ID') || url.includes('XXXXXX')) {
+        alert('Настройте ссылку на Google Form в начале скрипта (GOOGLE_FORM_BASE_URL и GOOGLE_FORM_ENTRIES).');
+        return;
+      }
+      window.open(url, '_blank');
+    }
+
+    function exitToMenu() {
+      if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+      if (state.gameCountdownInterval) { clearInterval(state.gameCountdownInterval); state.gameCountdownInterval = null; }
+      document.getElementById('setupPanel').style.display = 'block';
+      document.getElementById('exercisePanel').style.display = 'none';
+      document.getElementById('resultPanel').style.display = 'none';
+    }
+
+    function again() {
+      document.getElementById('setupPanel').style.display = 'block';
+      document.getElementById('exercisePanel').style.display = 'none';
+      document.getElementById('resultPanel').style.display = 'none';
+    }
+
+    document.querySelectorAll('input[name="mode"]').forEach(r => {
+      r.addEventListener('change', toggleModeOptions);
+    });
+    toggleModeOptions();
+
+    document.getElementById('btnStart').addEventListener('click', startTraining);
+    document.getElementById('btnPause').addEventListener('click', function() {
+      if (state.paused) resumeGame(); else pauseGame();
+    });
+    document.getElementById('btnResume').addEventListener('click', resumeGame);
+    document.getElementById('btnExitToMenu').addEventListener('click', exitToMenu);
+    document.getElementById('btnSendReport').addEventListener('click', sendReport);
+    document.getElementById('btnAgain').addEventListener('click', again);
+  </script>
+</body>
+</html>
